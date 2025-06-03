@@ -70,6 +70,12 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle(prefix+"/", http.StripPrefix(prefix, gwmux))
 
+	// Dummy /health endpoint for warm-up
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
+
 	// HTTP server
 	httpServer := &http.Server{
 		Addr:    ":8080",
@@ -80,6 +86,30 @@ func main() {
 		logger.Log.Info("HTTP gateway started on port 8080 with prefix " + prefix)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Log.Fatal("HTTP gateway error", zap.Error(err))
+		}
+	}()
+
+	go func() {
+		timeout := time.After(30 * time.Second)
+		ticker := time.NewTicker(200 * time.Millisecond)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-timeout:
+				logger.Log.Error("warm-up timeout: /health not ready")
+				return
+			case <-ticker.C:
+				resp, err := http.Get("http://localhost:8080/health")
+				if err == nil && resp.StatusCode == http.StatusOK {
+					logger.Log.Info("/health warm-up successful")
+					resp.Body.Close()
+					return
+				}
+				if resp != nil {
+					resp.Body.Close()
+				}
+			}
 		}
 	}()
 
