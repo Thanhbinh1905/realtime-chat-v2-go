@@ -14,7 +14,6 @@ func Connect(dns string) error {
 	if err != nil {
 		return err
 	}
-
 	Pool = pool
 	return nil
 }

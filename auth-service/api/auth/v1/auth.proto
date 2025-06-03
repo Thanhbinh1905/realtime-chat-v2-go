@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+option go_package = "github.com/Thanhbinh1905/realtime-chat-v2-go/api/auth/v1;authpb";
+
+import "google/api/annotations.proto";
+
+package auth;
+
+service AuthService {
+  rpc Register(RegisterRequest) returns (AuthResponse) {
+    option (google.api.http) = {
+      post: "/v1/register"
+      body: "*"
+    };
+  }
+
+  rpc Login(LoginRequest) returns (AuthResponse) {
+    option (google.api.http) = {
+      post: "/v1/login"
+      body: "*"
+    };
+  }
+}
+
+message RegisterRequest {
+    string email = 1;
+    string password = 2;
+}
+
+message LoginRequest {
+    string email = 1;
+    string password = 2;
+}
+
+message AuthResponse {
+    string access_token = 1;
+    string refresh_token = 2;
+}
