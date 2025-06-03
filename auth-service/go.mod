@@ -6,6 +6,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.5
 	google.golang.org/grpc v1.72.2
 	google.golang.org/protobuf v1.36.5
+	github.com/Thanhbinh1905/realtime-chat-v2-go/shared v0.0.1
 )
 
 require (
