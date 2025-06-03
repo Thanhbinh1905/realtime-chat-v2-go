@@ -1,4 +1,4 @@
-module github.com/Thanhbinh1905/realtime-chat-v2/shared
+module github.com/Thanhbinh1905/realtime-chat-v2-go/shared
 
 go 1.24.3
 
