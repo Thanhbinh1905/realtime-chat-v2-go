@@ -192,10 +192,10 @@ const file_auth_proto_rawDesc = "" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\"V\n" +
 	"\fAuthResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
-	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken2\xa4\x01\n" +
-	"\vAuthService\x12N\n" +
-	"\bRegister\x12\x15.auth.RegisterRequest\x1a\x12.auth.AuthResponse\"\x17\x82\xd3\xe4\x93\x02\x11:\x01*\"\f/v1/register\x12E\n" +
-	"\x05Login\x12\x12.auth.LoginRequest\x1a\x12.auth.AuthResponse\"\x14\x82\xd3\xe4\x93\x02\x0e:\x01*\"\t/v1/loginBAZ?github.com/Thanhbinh1905/realtime-chat-v2-go/api/auth/v1;authpbb\x06proto3"
+	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken2\x9e\x01\n" +
+	"\vAuthService\x12K\n" +
+	"\bRegister\x12\x15.auth.RegisterRequest\x1a\x12.auth.AuthResponse\"\x14\x82\xd3\xe4\x93\x02\x0e:\x01*\"\t/register\x12B\n" +
+	"\x05Login\x12\x12.auth.LoginRequest\x1a\x12.auth.AuthResponse\"\x11\x82\xd3\xe4\x93\x02\v:\x01*\"\x06/loginBAZ?github.com/Thanhbinh1905/realtime-chat-v2-go/api/auth/v1;authpbb\x06proto3"
 
 var (
 	file_auth_proto_rawDescOnce sync.Once

@@ -25,7 +25,7 @@ import (
 )
 
 func main() {
-	// Khởi tạo logger, config, kết nối DB
+	// Init logger, config, DB
 	logger.InitLogger(true)
 	cfg := config.LoadConfig()
 	if err := db.Connect(cfg.DatabaseURL); err != nil {
@@ -33,18 +33,18 @@ func main() {
 	}
 	defer db.Close()
 
-	// Tạo repository, service, handler
+	// Init repo, service, handler
 	repo := repository.NewRepository(db.Pool)
-	service := service.NewService(repo, auth.NewTokenMaker(cfg.JWTSecret), hasher.NewHasher())
-	handler := handler.NewAuthServiceServer(service)
+	svc := service.NewService(repo, auth.NewTokenMaker(cfg.JWTSecret), hasher.NewHasher())
+	h := handler.NewAuthServiceServer(svc)
 
-	// 1. Chạy gRPC server trên port 50051
+	// gRPC server
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
 		logger.Log.Fatal("failed to listen on port 50051", zap.Error(err))
 	}
 	grpcServer := grpc.NewServer()
-	authpb.RegisterAuthServiceServer(grpcServer, handler)
+	authpb.RegisterAuthServiceServer(grpcServer, h)
 
 	go func() {
 		logger.Log.Info("gRPC server started on port 50051")
@@ -53,7 +53,7 @@ func main() {
 		}
 	}()
 
-	// 2. Tạo gRPC Gateway mux (proxy HTTP → gRPC)
+	// gRPC Gateway
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -62,36 +62,39 @@ func main() {
 
 	err = authpb.RegisterAuthServiceHandlerFromEndpoint(ctx, gwmux, "localhost:50051", opts)
 	if err != nil {
-		logger.Log.Fatal("failed to start HTTP gateway", zap.Error(err))
+		logger.Log.Fatal("failed to register handler", zap.Error(err))
 	}
 
-	// 3. Khởi tạo HTTP server
+	// ⚡ Prefix /api/v1/auth/*
+	prefix := "/api/v1/auth"
+	mux := http.NewServeMux()
+	mux.Handle(prefix+"/", http.StripPrefix(prefix, gwmux))
+
+	// HTTP server
 	httpServer := &http.Server{
 		Addr:    ":8080",
-		Handler: gwmux,
+		Handler: mux,
 	}
 
 	go func() {
-		logger.Log.Info("HTTP gateway started on port 8080")
+		logger.Log.Info("HTTP gateway started on port 8080 with prefix " + prefix)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Log.Fatal("failed to serve HTTP gateway", zap.Error(err))
+			logger.Log.Fatal("HTTP gateway error", zap.Error(err))
 		}
 	}()
 
-	// 4. Đợi signal để graceful shutdown (Ctrl+C)
+	// Shutdown
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	<-sigs
 
 	logger.Log.Info("Shutting down servers...")
 
-	// Graceful stop gRPC server
 	grpcServer.GracefulStop()
 
-	// Graceful shutdown HTTP server với timeout 5s
-	ctxTimeout, cancelTimeout := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelTimeout()
-	if err := httpServer.Shutdown(ctxTimeout); err != nil {
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelShutdown()
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.Log.Error("HTTP server shutdown error", zap.Error(err))
 	}
 

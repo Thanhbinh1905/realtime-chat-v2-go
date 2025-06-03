@@ -17,6 +17,7 @@ services:
       context: ..
       dockerfile: auth-service/Dockerfile
     container_name: auth-service
+    restart: always
     env_file:
       - ./.env
     ports:

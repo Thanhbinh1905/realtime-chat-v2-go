@@ -9,14 +9,14 @@ package auth;
 service AuthService {
   rpc Register(RegisterRequest) returns (AuthResponse) {
     option (google.api.http) = {
-      post: "/v1/register"
+      post: "/register"
       body: "*"
     };
   }
 
   rpc Login(LoginRequest) returns (AuthResponse) {
     option (google.api.http) = {
-      post: "/v1/login"
+      post: "/login"
       body: "*"
     };
   }
