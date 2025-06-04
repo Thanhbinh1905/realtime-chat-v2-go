@@ -5,9 +5,12 @@ import (
 
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/model"
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/repository"
+
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/utils/auth"
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/utils/errors"
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/utils/hasher"
+
+	_ "github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/infra/kafka"
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/shared/logger"
 	"github.com/google/uuid"
 	"go.uber.org/zap"

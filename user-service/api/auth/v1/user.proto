@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/Thanhbinh1905/realtime-chat-v2-go/api/user/v1;userpb";
+
+import "google/api/annotations.proto";
+
+// =========================
+// UserService gRPC
+// =========================
+
+service UserService {
+  rpc GetProfile(GetProfileRequest) returns (UserProfile) {
+    option (google.api.http) = {
+      get: "/v1/users/{user_id}"
+    };
+  }
+
+  rpc UpdateProfile(UpdateProfileRequest) returns (UserProfile) {
+    option (google.api.http) = {
+      put: "/v1/users/{user_id}"
+      body: "*"
+    };
+  }
+
+  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse) {
+    option (google.api.http) = {
+      get: "/v1/users/search"
+    };
+  }
+
+  // Friend System
+  rpc SendFriendRequest(FriendRequestInput) returns (FriendActionResponse) {
+    option (google.api.http) = {
+      post: "/v1/friends/request"
+      body: "*"
+    };
+  }
+
+  rpc RespondToFriendRequest(FriendRespondInput) returns (FriendActionResponse) {
+    option (google.api.http) = {
+      post: "/v1/friends/respond"
+      body: "*"
+    };
+  }
+
+  rpc GetFriendRequests(GetFriendRequestsRequest) returns (FriendRequestsResponse) {
+    option (google.api.http) = {
+      get: "/v1/friends/requests/{user_id}"
+    };
+  }
+
+  rpc GetFriends(GetFriendsRequest) returns (FriendsListResponse) {
+    option (google.api.http) = {
+      get: "/v1/friends/{user_id}"
+    };
+  }
+
+  rpc RemoveFriend(RemoveFriendRequest) returns (FriendActionResponse) {
+    option (google.api.http) = {
+      delete: "/v1/friends/{user_id}/{friend_id}"
+    };
+  }
+}
+
+// =========================
+// Messages
+// =========================
+
+message GetProfileRequest {
+  string user_id = 1;
+}
+
+message UpdateProfileRequest {
+  string user_id = 1;
+  string username = 2;
+  string avatar = 3;
+}
+
+message UserProfile {
+  string user_id = 1;
+  string email = 2;
+  string username = 3;
+  string avatar = 4;
+}
+
+// Search
+message SearchUsersRequest {
+  string keyword = 1;
+}
+
+message SearchUsersResponse {
+  repeated UserProfile results = 1;
+}
+
+// Friend system
+message FriendRequestInput {
+  string from_user_id = 1;
+  string to_user_id = 2;
+}
+
+message FriendRespondInput {
+  string request_id = 1;
+  string action = 2; // "accept", "reject"
+}
+
+message FriendActionResponse {
+  string message = 1;
+}
+
+message GetFriendRequestsRequest {
+  string user_id = 1;
+}
+
+message FriendRequestsResponse {
+  repeated FriendRequestData requests = 1;
+}
+
+message FriendRequestData {
+  string id = 1;
+  string from_user_id = 2;
+  string to_user_id = 3;
+  string status = 4;
+  string created_at = 5;
+}
+
+message GetFriendsRequest {
+  string user_id = 1;
+}
+
+message FriendsListResponse {
+  repeated UserProfile friends = 1;
+}
+
+message RemoveFriendRequest {
+  string user_id = 1;
+  string friend_id = 2;
+}
