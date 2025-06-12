@@ -10,7 +10,6 @@ import (
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/utils/errors"
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/utils/hasher"
 
-	_ "github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/infra/kafka"
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/shared/logger"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -38,7 +37,6 @@ func NewService(repo repository.Repository, tokenMaker auth.TokenMaker, hasher h
 }
 
 func (s *service) Register(ctx context.Context, input *model.RegisterInput) (*model.AuthResponse, error) {
-
 	// Validate input
 	if err := validator.New().Struct(input); err != nil {
 		logger.Log.Error("validation error: ", zap.Error(err))
@@ -101,7 +99,6 @@ func (s *service) Login(ctx context.Context, input *model.LoginInput) (*model.Au
 	}
 
 	account, err := s.repo.GetAccountByEmail(ctx, input.Email)
-
 	if err != nil {
 		logger.Log.Error("account not found:", zap.Error(err))
 		return nil, errors.ErrInvalidCredentials // Tránh leak info
@@ -134,5 +131,4 @@ func (s *service) Login(ctx context.Context, input *model.LoginInput) (*model.Au
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, nil
-
 }

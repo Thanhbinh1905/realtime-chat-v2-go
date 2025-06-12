@@ -12,7 +12,7 @@ services:
     volumes:
       - postgres-auth-data:/var/lib/postgresql/data
       - ./auth-service/internal/db/schema.sql:/docker-entrypoint-initdb.d/init.sql:ro
-  
+
   auth-service:
     build:
       context: .
@@ -44,5 +44,15 @@ services:
     depends_on:
       - zookeeper
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
 volumes:
   postgres-auth-data:
+
