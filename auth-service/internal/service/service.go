@@ -18,7 +18,7 @@ import (
 )
 
 type Service interface {
-	Register(ctx context.Context, input *model.RegisterInput) (*model.AuthResponse, error)
+	Register(ctx context.Context, input *model.RegisterInput) (*model.RegisterResponse, error)
 	Login(ctx context.Context, input *model.LoginInput) (*model.AuthResponse, error)
 }
 
@@ -36,7 +36,7 @@ func NewService(repo repository.Repository, tokenMaker auth.TokenMaker, hasher h
 	}
 }
 
-func (s *service) Register(ctx context.Context, input *model.RegisterInput) (*model.AuthResponse, error) {
+func (s *service) Register(ctx context.Context, input *model.RegisterInput) (*model.RegisterResponse, error) {
 	// Validate input
 	if err := validator.New().Struct(input); err != nil {
 		logger.Log.Error("validation error: ", zap.Error(err))
@@ -86,9 +86,10 @@ func (s *service) Register(ctx context.Context, input *model.RegisterInput) (*mo
 		return nil, err
 	}
 
-	return &model.AuthResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
+	return &model.RegisterResponse{
+		AccessToken:     accessToken,
+		RefreshToken:    refreshToken,
+		RegisterRequest: *req,
 	}, nil
 }
 

@@ -13,6 +13,7 @@ import (
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/config"
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/db"
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/handler"
+	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/mq"
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/repository"
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/service"
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/utils/auth"
@@ -33,10 +34,16 @@ func main() {
 	}
 	defer db.Close()
 
+	publisher, err := mq.NewRabbitPublisher(cfg.RAbbitMQURL)
+	if err != nil {
+		logger.Log.Fatal("failed to create RabbitMQ publisher", zap.Error(err))
+	}
+	defer publisher.Close()
+
 	// Init repo, service, handler
 	repo := repository.NewRepository(db.Pool)
 	svc := service.NewService(repo, auth.NewTokenMaker(cfg.JWTSecret), hasher.NewHasher())
-	h := handler.NewAuthServiceServer(svc)
+	h := handler.NewAuthServiceServer(svc, publisher)
 
 	// gRPC server
 	lis, err := net.Listen("tcp", ":50051")

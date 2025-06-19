@@ -34,3 +34,8 @@ type AuthResponse struct {
 	AccessToken  string
 	RefreshToken string
 }
+type RegisterResponse struct {
+	AccessToken     string
+	RefreshToken    string
+	RegisterRequest RegisterRequest
+}

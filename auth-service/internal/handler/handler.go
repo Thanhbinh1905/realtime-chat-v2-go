@@ -5,6 +5,7 @@ import (
 
 	authpb "github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/api/auth/v1"
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/model"
+	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/mq"
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/service"
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/shared/logger"
 	"go.uber.org/zap"
@@ -15,6 +16,7 @@ import (
 type authHandler struct {
 	service service.Service
 	authpb.UnimplementedAuthServiceServer
+	publisher *mq.RabbitPublisher
 }
 
 type AuthHandler interface {
@@ -22,9 +24,10 @@ type AuthHandler interface {
 	Login(ctx context.Context, req *authpb.LoginRequest) (*authpb.AuthResponse, error)
 }
 
-func NewAuthServiceServer(s service.Service) authpb.AuthServiceServer {
+func NewAuthServiceServer(s service.Service, pub *mq.RabbitPublisher) authpb.AuthServiceServer {
 	return &authHandler{
-		service: s,
+		service:   s,
+		publisher: pub,
 	}
 }
 
@@ -38,6 +41,18 @@ func (h *authHandler) Register(ctx context.Context, req *authpb.RegisterRequest)
 		logger.Log.Error("user registration failed", zap.String("email", req.GetEmail()), zap.Error(err))
 		return nil, status.Errorf(codes.Internal, "register failed: %v", err)
 	}
+
+	// 📨 Publish event to RabbitMQ
+	event := mq.UserSignUpEvent{
+		UserID: resp.RegisterRequest.ID,
+		Email:  resp.RegisterRequest.Email,
+	}
+
+	if err := h.publisher.PublishUserSignedUp(event); err != nil {
+		logger.Log.Warn("failed to publish signup event", zap.String("user_id", resp.RegisterRequest.ID.String()), zap.Error(err))
+		// optional: return error or just log
+	}
+
 	logger.Log.Info("user registered successfully", zap.String("email", req.GetEmail()))
 	return &authpb.AuthResponse{
 		AccessToken:  resp.AccessToken,
