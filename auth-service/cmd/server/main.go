@@ -20,27 +20,34 @@ import (
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/auth-service/internal/utils/hasher"
 	"github.com/Thanhbinh1905/realtime-chat-v2-go/shared/logger"
 
+	"github.com/gin-gonic/gin"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
-	// Init logger, config, DB
+	// Init logger
 	logger.InitLogger(true)
+
+	// Load config
 	cfg := config.LoadConfig()
+
+	// Connect DB
 	if err := db.Connect(cfg.DatabaseURL); err != nil {
-		logger.Log.Fatal("failed to connect to database", zap.Error(err))
+		logger.Log.Fatal("failed to connect database", zap.Error(err))
 	}
 	defer db.Close()
 
+	// Init RabbitMQ
 	publisher, err := mq.NewRabbitPublisher(cfg.RAbbitMQURL)
 	if err != nil {
 		logger.Log.Fatal("failed to create RabbitMQ publisher", zap.Error(err))
 	}
 	defer publisher.Close()
 
-	// Init repo, service, handler
+	// Repo, service, handler
 	repo := repository.NewRepository(db.Pool)
 	svc := service.NewService(repo, auth.NewTokenMaker(cfg.JWTSecret), hasher.NewHasher())
 	h := handler.NewAuthServiceServer(svc, publisher)
@@ -53,63 +60,69 @@ func main() {
 	grpcServer := grpc.NewServer()
 	authpb.RegisterAuthServiceServer(grpcServer, h)
 
+	// run gRPC server
 	go func() {
-		logger.Log.Info("gRPC server started on port 50051")
+		logger.Log.Info("🚀 gRPC server started on :50051")
 		if err := grpcServer.Serve(lis); err != nil {
 			logger.Log.Fatal("failed to serve gRPC", zap.Error(err))
 		}
 	}()
 
-	// gRPC Gateway
+	// gRPC gateway (mux)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	gwmux := runtime.NewServeMux()
-	opts := []grpc.DialOption{grpc.WithInsecure()}
-
-	err = authpb.RegisterAuthServiceHandlerFromEndpoint(ctx, gwmux, "localhost:50051", opts)
-	if err != nil {
-		logger.Log.Fatal("failed to register handler", zap.Error(err))
+	gwMux := runtime.NewServeMux()
+	dialOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 
-	// ⚡ Prefix /api/v1/auth/*
-	prefix := "/api/v1/auth"
-	mux := http.NewServeMux()
-	mux.Handle(prefix+"/", http.StripPrefix(prefix, gwmux))
+	err = authpb.RegisterAuthServiceHandlerFromEndpoint(ctx, gwMux, "localhost:50051", dialOpts)
+	if err != nil {
+		logger.Log.Fatal("failed to register grpc-gateway handler", zap.Error(err))
+	}
 
-	// Dummy /health endpoint for warm-up
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+	// GIN
+	r := gin.Default()
+
+	// Health check
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	// HTTP server
+	// Mount grpc-gateway under /api/v1/auth/*
+	r.Any("/api/v1/auth/*any", gin.WrapH(gwMux))
+
+	// Run Gin server
 	httpServer := &http.Server{
-		Addr:    ":8080",
-		Handler: mux,
+		Addr:         ":8080",
+		Handler:      r,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
 	}
 
 	go func() {
-		logger.Log.Info("HTTP gateway started on port 8080 with prefix " + prefix)
+		logger.Log.Info("🚀 Gin HTTP gateway started on :8080, prefix /api/v1/auth")
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Log.Fatal("HTTP gateway error", zap.Error(err))
+			logger.Log.Fatal("Gin HTTP server error", zap.Error(err))
 		}
 	}()
 
-	// Shutdown
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	<-sigs
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
 
-	logger.Log.Info("Shutting down servers...")
+	logger.Log.Info("🔥 Shutting down servers...")
 
 	grpcServer.GracefulStop()
 
 	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelShutdown()
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
-		logger.Log.Error("HTTP server shutdown error", zap.Error(err))
+		logger.Log.Error("Gin HTTP shutdown error", zap.Error(err))
 	}
 
-	logger.Log.Info("Servers stopped successfully")
+	logger.Log.Info("✅ Servers stopped cleanly")
 }
